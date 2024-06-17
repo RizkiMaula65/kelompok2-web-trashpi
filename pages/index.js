@@ -1,8 +1,50 @@
+'use client'
+
+import { get, ref } from 'firebase/database';
+import { useEffect, useState } from 'react';
+import { database } from './firebaseConfig';
 import Head from 'next/head';
-import styles from '../styles/Home.module.css';
-import Script from 'next/script';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { onValue, query, limitToLast } from 'firebase/database';
 
 export default function Home() {
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    const measurementsRef = ref(database, 'measurements');
+    get(measurementsRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const dataAsArray = Object.entries(data).map(([id, value]) => ({ id, ...value }));
+        const lastMeasurement = dataAsArray[dataAsArray.length - 1];
+        setUsers([lastMeasurement]);
+      } else {
+        console.log('No data available');
+      }
+    }).catch((error) => {
+      console.error(error);
+    });
+  }, []);
+
+  const [lastTenMeasurements, setLastTenMeasurements] = useState([]);
+
+  useEffect(() => {
+    const lastTenMeasurementsRef = ref(database, 'measurements');
+    onValue(query(lastTenMeasurementsRef, limitToLast(100)), (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const lastTenMeasurements = Object.keys(data).map((key, i) => ({
+          id: key,
+          ...data[key],
+        }));
+        setLastTenMeasurements(lastTenMeasurements);
+      } else {
+        console.log('No data available');
+      }
+    }, {
+      onlyOnce: true,
+    });
+  }, []);
   return (
     <>
     <Head>
@@ -65,19 +107,6 @@ export default function Home() {
         <div className="row justify-content-center mb-5">
           <div className="col-md-6">
             {/* Your content for column 1, row 1 goes here */}
-            <div className="form-check form-switch mb-3">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="flexSwitchCheckDefault"
-              />
-              <label
-                className="form-check-label"
-                htmlFor="flexSwitchCheckDefault"
-              >
-                Switch Tempat Sampah 1
-              </label>
-            </div>
             <div className="card shadow border-start-primary py-2">
               <div className="card-body">
                 <div className="row align-items-center no-gutters">
@@ -85,9 +114,11 @@ export default function Home() {
                     <div className="text-uppercase text-primary fw-bold text-xs mb-1">
                       <span>Kapasitas Tempat Sampah 1</span>
                     </div>
-                    <div className="text-dark fw-bold h5 mb-0">
-                      <span id="capacityTrash1">100%</span>
-                    </div>
+                    {users.map((user) => (
+                      <div key = {user.id} className="text-dark fw-bold h5 mb-0">
+                        <span>{parseFloat(user.trash_can_1).toFixed(1)}% </span>
+                      </div>
+                    ))}
                   </div>
                   <div className="col-auto">
                     <i className="fas fa-calendar fa-2x text-gray-300" />
@@ -98,19 +129,6 @@ export default function Home() {
           </div>
           <div className="col-md-6">
             {/* Your content for column 2, row 1 goes here */}
-            <div className="form-check form-switch mb-3">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                id="flexSwitchCheckDefault"
-              />
-              <label
-                className="form-check-label"
-                htmlFor="flexSwitchCheckDefault"
-              >
-                Switch Tempat Sampah 2
-              </label>
-            </div>
             <div className="card shadow border-start-primary py-2">
               <div className="card-body">
                 <div className="row align-items-center no-gutters">
@@ -118,9 +136,11 @@ export default function Home() {
                     <div className="text-uppercase text-primary fw-bold text-xs mb-1">
                       <span>Kapasitas Tempat Sampah 2</span>
                     </div>
-                    <div className="text-dark fw-bold h5 mb-0">
-                      <span>100%</span>
-                    </div>
+                    {users.map((user) => (
+                      <div key = {user.id} className="text-dark fw-bold h5 mb-0">
+                        <span>{parseFloat(user.trash_can_2).toFixed(1)}% </span>
+                      </div>
+                    ))}
                   </div>
                   <div className="col-auto">
                     <i className="fas fa-calendar fa-2x text-gray-300" />
@@ -143,21 +163,28 @@ export default function Home() {
                     </div>
                     <div className="row g-0 align-items-center">
                       <div className="col-auto">
-                        <div className="text-dark fw-bold h5 mb-0 me-3">
-                          <span>50%</span>
+                      {users.map((user) => (
+                        <div key = {user.id} className="text-dark fw-bold h5 mb-0 me-3">
+                          <span>{(100 - user.trash_can_1).toFixed(1)}% </span>
                         </div>
+                      ))}
                       </div>
                       <div className="col">
                         <div className="progress progress-sm">
-                          <div
-                            className="progress-bar bg-info"
-                            aria-valuenow={50}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            style={{ width: "50%" }}
-                          >
-                            <span className="visually-hidden">50%</span>
-                          </div>
+                        {users.map((user) => {
+                          const remainingCapacity1 = 100 - user.trash_can_1;
+                          return (
+                            <div
+                              className="progress-bar bg-info"
+                              aria-valuenow={remainingCapacity1}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              style={{ width: `${remainingCapacity1}%` }}
+                            >
+                              <span className="visually-hidden">{`${remainingCapacity1}%`}</span>
+                            </div>
+                          );
+                        })}
                         </div>
                       </div>
                     </div>
@@ -171,32 +198,39 @@ export default function Home() {
           </div>
           <div className="col-md-6">
             {/* Your content for column 2, row 2 goes here */}
-            <div className="card shadow border-start-info py-2">
+            <div className="card shadow border-start-info py-2 mb-5">
               <div className="card-body">
                 <div className="row align-items-center no-gutters">
                   <div className="col me-2">
                     <div className="text-uppercase text-info fw-bold text-xs mb-1">
-                      <span>Kapasitas Tersisa TS1:</span>
+                      <span>Kapasitas Tersisa TS2:</span>
                     </div>
                     <div className="row g-0 align-items-center">
                       <div className="col-auto">
-                        <div className="text-dark fw-bold h5 mb-0 me-3">
-                          <span>50%</span>
-                        </div>
+                        {users.map((user) => (
+                          <div key = {user.id} className="text-dark fw-bold h5 mb-0 me-3">
+                            <span>{(100 - user.trash_can_2).toFixed(1)}% </span>
+                          </div>
+                        ))}
                       </div>
                       <div className="col">
                         <div className="progress progress-sm">
-                          <div
-                            className="progress-bar bg-info"
-                            aria-valuenow={50}
-                            aria-valuemin={0}
-                            aria-valuemax={100}
-                            style={{ width: "50%" }}
-                          >
-                            <span className="visually-hidden">50%</span>
-                          </div>
+                        {users.map((user) => {
+                          const remainingCapacity2 = 100 - user.trash_can_2;
+                          return (
+                            <div
+                              className="progress-bar bg-info"
+                              aria-valuenow={remainingCapacity2}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              style={{ width: `${remainingCapacity2}%` }}
+                            >
+                              <span className="visually-hidden">{`${remainingCapacity2}%`}</span>
+                            </div>
+                          );
+                        })}
                         </div>
-                      </div>
+                      </div>                    
                     </div>
                   </div>
                   <div className="col-auto">
@@ -206,6 +240,23 @@ export default function Home() {
               </div>
             </div>
           </div>
+          <LineChart
+            width={1000}
+            height={400}
+            data={lastTenMeasurements.map((measurement, i) => ({
+              name: `Measurement ${i + 1}`,
+              'Remaining Capacity TS1': 100 - measurement.trash_can_1,
+              'Remaining Capacity TS2': 100 - measurement.trash_can_2,
+            }))}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="name" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="Remaining Capacity TS1" stroke="#8884d8" />
+            <Line type="monotone" dataKey="Remaining Capacity TS2" stroke="#82ca9d" />
+          </LineChart>
         </div>
       </div>
     </section>
@@ -229,8 +280,7 @@ export default function Home() {
             </svg>
             <h4>Real-Time</h4>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc quam
-              urna, dignissim nec auctor in, mattis vitae leo.
+              Trash bin capacity can be monitored in real time with a realtime database
             </p>
           </div>
           <div className="col-md-5 feature-box">
@@ -249,8 +299,7 @@ export default function Home() {
             </svg>
             <h4>Analytical</h4>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc quam
-              urna, dignissim nec auctor in, mattis vitae leo.
+              The results of monitoring can be used as analysis in regulating the period and implementation of waste management.
             </p>
           </div>
           <div className="col-md-5 feature-box">
@@ -266,16 +315,14 @@ export default function Home() {
             </svg>
             <h4>Notifications</h4>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc quam
-              urna, dignissim nec auctor in, mattis vitae leo.
+              Can provide notifications when trash bin capacity reaches 100%
             </p>
           </div>
           <div className="col-md-5 feature-box">
             <i className="icon-refresh icon" />
             <h4>Responsive</h4>
             <p>
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc quam
-              urna, dignissim nec auctor in, mattis vitae leo.
+              Can provide responses to short distance users via LED and long distance users via notifications.
             </p>
           </div>
         </div>
@@ -291,7 +338,7 @@ export default function Home() {
             <div className="card text-center clean-card">
               <img
                 className="card-img-top w-100 d-block"
-                src="assets/img/avatars/avatar1.jpg"
+                src="assets/img/avatars/ii.jpg"
               />
               <div className="card-body info">
                 <h4 className="card-title">Rizki Maula</h4>
@@ -314,7 +361,7 @@ export default function Home() {
             <div className="card text-center clean-card">
               <img
                 className="card-img-top w-100 d-block"
-                src="assets/img/avatars/avatar2.jpg"
+                src="assets/img/avatars/yafi.jpg"
               />
               <div className="card-body info">
                 <h4 className="card-title">Muhammad Yafi Agung</h4>
@@ -337,7 +384,7 @@ export default function Home() {
             <div className="card text-center clean-card">
               <img
                 className="card-img-top w-100 d-block"
-                src="assets/img/avatars/avatar3.jpg"
+                src="assets/img/avatars/homs.jpg"
               />
               <div className="card-body info">
                 <h4 className="card-title">M. Homsi Awaludin</h4>
