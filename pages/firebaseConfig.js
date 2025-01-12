@@ -7,8 +7,8 @@ import { getDatabase } from "firebase/database";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyB1aZ4L7v4EsTOoUB4if3VJe_HYwR_Jc0E",
-  authDomain: "trashpi-db.firebaseapp.com",
+  apiKey: "-",
+  authDomain: "-",
   databaseURL: "https://trashpi-db-default-rtdb.firebaseio.com",
   projectId: "trashpi-db",
   storageBucket: "trashpi-db.appspot.com",
